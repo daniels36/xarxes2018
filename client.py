@@ -194,8 +194,8 @@ def helloTreatment(reply):
     #preparacio dels parametres necessaris per al proces de enviament d'HELLOS
     resp = 0
     print situation
+    sendSubsInfo()
     comPDU = definePDU(cons.PDU_FORM, cons.HELLO, rndnum, name + ',' + situation)
-    time.sleep(1)
     socudp.sendto(comPDU, (server, int(srvUDP)))
     debugMode("Enviat primer Paquet amb HELLO")
     resp = resp + 1
@@ -316,6 +316,15 @@ def KeyboardCommand(reply):
             #tancament en cas de fallada de recepcio de comandes
             while True:
                 os.kill(os.getppid(),signal.SIGTERM)
+
+def sendSubsInfo():
+    data = localTCP + ','
+    for i in elemntslst):
+        data = data + i + ";"
+
+    data = data[:-1]
+    comPDU = definePDU(cons.PDU_FORM, cons.HELLO, rndnum, data)
+    socudp.sendto(comPDU, (server, int(srvUDP)))
 
 if __name__ == '__main__':
     #parseig de les comandes rebudes a la hroa de la crida
