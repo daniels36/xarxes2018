@@ -20,21 +20,21 @@ def main():
 # FASE DE REGISTRE
 # PROCES D'ENREGISTRAMENT
 def register():
-    global rndnum, state
+    global rndnum, state, socudp
     reply = ""
 
-    debugMode("Client passa a NOT_SUBSCRIBED")
+    utilities.debugMode("Client passa a NOT_SUBSCRIBED", options.verbose)
     state = utilities.actState("NOT_SUBSCRIBED")
-    createSock()
-    debugMode("Create Socket UDP")
+    socudp = utilities.createSock()
+    utilities.debugMode("Create Socket UDP")
     treatDataFile()
-    debugMode("Lectura del fitxer de dades del client")
+    utilities.debugMode("Lectura del fitxer de dades del client")
 
     regPDU = definePDU(cons.PDU_FORM, cons.SUBS_REQ, cons.DEF_RND,
                        name + ',' + situation)
-    debugMode("Inici del proces de registre")
+    utilities.debugMode("Inici del proces de registre")
     reply = registerloop(regPDU)
-    debugMode("Proces de registre finalitzat")
+    utilities.debugMode("Proces de registre finalitzat")
     rndnum = reply[2]
     replyProcess(reply)
 
@@ -50,8 +50,10 @@ def registerloop(regPDU):
     state = utilities.actState("WAIT_ACK_SUBS")
     while seq_num <= cons.MAX_SEQ:
         try:
-            debugMode("Intent de registre " + str(seq_num))
-            debugMode("Packet numero " + str(num_packs))
+            utilities.debugMode("Intent de registre " + str(seq_num),
+                                options.verbose)
+            utilities.debugMode("Packet numero " + str(num_packs),
+                                options.verbose)
             return regTry(regPDU, t)
 
         except socket.timeout:
@@ -87,12 +89,6 @@ def regTry(regPDU, t):
     return struct.unpack(cons.PDU_FORM, socudp.recvfrom(recPort)[0])
 
 
-# MODEDEBUG
-def debugMode(toPrint):
-    if options.verbose:
-        print time.strftime('%X') + ' ' + "[DEBUG]->" + ' ' + toPrint
-
-
 # TRACTAMENT DADES LLEGIDES
 def treatDataFile():
     global name, situation, elemntslst, mac, localTCP, server, srvUDP
@@ -115,20 +111,12 @@ def treatDataFile():
 def definePDU(form, sign, random, data):
     global mac
     # crea una PDU amb les dades rebudes per parametre
-    debugMode("Dades a enviar:")
-    debugMode("Tipus Paquet: " + str(sign) + " MAC: " + mac +
-              " Numero aleatori: " + str(random) + " Dades: " + data)
+    utilities.debugMode("Dades a enviar:", options.verbose)
+    utilities.debugMode("Tipus Paquet: " + str(sign) + " MAC: " + mac +
+                        " Numero aleatori: " + str(random) + " Dades: " + data,
+                        options.verbose)
 
     return struct.pack(form, sign, mac, random, data)
-
-
-# CREACIO DEL SOCSKET
-def createSock():
-    global socudp
-
-    # creacio i assignacio del socket a un port
-    socudp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    socudp.bind(("", 0))
 
 
 # TRACTAMENT DE RESPOSTA DE REGISTRE
@@ -168,19 +156,21 @@ def replyProcess(reply):
 def distributeWork(reply):
     global pid
 
-    debugMode("Registre Correcte")
-    debugMode("Creacio de proces fill per a rebre instruccions per teclat")
+    utilities.debugMode("Registre Correcte", options.verbose)
+    utilities.debugMode("Creacio de proces fill per a rebre instruccions per \
+                        teclat", options.verbose)
     pid = os.fork()
     # distribuim el treball a realitzar
     # la rebuda de comandes sera realitzada per el "fill" mentre que el
     # manteniment de la conexio el realitzara el "pare"
     if pid == 0:
-        debugMode("Proces fill preparat per a rebre instruccions per teclat")
+        utilities.debugMode("Proces fill preparat per a rebre instruccions per \
+                            teclat", options.verbose)
         KeyboardCommand(reply)
 
     else:
-        debugMode("Proces pare preparat per iniciar el \
-                  manteniment de comunicacions")
+        utilities.debugMode("Proces pare preparat per iniciar el \
+                  manteniment de comunicacions", options.verbose)
         helloTreatment(reply)
 
 
@@ -196,11 +186,12 @@ def helloTreatment(reply):
     comPDU = definePDU(cons.PDU_FORM, cons.HELLO, rndnum, name + ',' +
                        situation)
     socudp.sendto(comPDU, (server, int(srvUDP)))
-    debugMode("Enviat primer Paquet amb HELLO")
+    utilities.debugMode("Enviat primer Paquet amb HELLO", options.verbose)
     resp = resp + 1
     timer = time.time()
     first = False
-    debugMode("Iniciant temportizador per a rebre respota de HELLO")
+    utilities.debugMode("Iniciant temportizador per a rebre respota de HELLO",
+                        options.verbose)
 
     # recv no bloquejant
     socudp.setblocking(0)
@@ -221,7 +212,8 @@ def helloTreatment(reply):
                     # en cas de resposta al primer HELLO informem del canvi
                     # d'estat
                     if not first:
-                        debugMode("Primer HELLO rebut passem a estat HELLO")
+                        utilities.debugMode("Primer HELLO rebut passem a \
+                                            estat HELLO", options.verbose)
                         state = utilities.actState("HELLO")
                         first = True
                         print msg
@@ -231,7 +223,8 @@ def helloTreatment(reply):
                     # + str(msg[4]))
                 # si el paquet es un rebug finalitzem proces
                 elif msg[0] == cons.HELLO_REJ:
-                    debugMode("Rebut rebuig de paquet")
+                    utilities.debugMode("Rebut rebuig de paquet",
+                                        options.verbose)
                     print msg
                     # debugMode("Paquet rebut: " + "Tipus paquet: " +
                     # str(msg[0]) + " Nom: " + str(msg[1]) + " MAC: " +
@@ -247,7 +240,8 @@ def helloTreatment(reply):
                 resp, timer = sendHello(resp, timer, comPDU)
         # si el servidor no contesta tanquem proces
         else:
-            debugMode("Impossible mantenir comunicacio amb el servidor")
+            utilities.debugMode("Impossible mantenir comunicacio amb el \
+                                servidor", options.verbose)
             os.kill(pid, signal.SIGKILL)
             state = utilities.closeConnection(socudp, state)
             timedRegister()
@@ -274,7 +268,7 @@ def handler(signum, frame):
 def sendHello(resp, timer, comPDU):
     # enviment d'HELLOs segons temporitzador
     if time.time() - timer >= cons.SND_TM:
-        debugMode("Enviat Paquet HELLO")
+        utilities.debugMode("Enviat Paquet HELLO", options.verbose)
         socudp.sendto(comPDU, (server, int(srvUDP)))
         # en cas de enviament increment de numero de enviades per portar
         # control i actualitzacio del temporitzador
@@ -288,7 +282,7 @@ def sendHello(resp, timer, comPDU):
 def KeyboardCommand(reply):
     global name, situation, elemntslst, mac, localTCP, server, srvUDP
     # recepcio de comandes fins que s'introdueixi la comanda quit
-    debugMode("Iniciant espera de comandes")
+    utilities.debugMode("Iniciant espera de comandes", options.verbose)
     while True:
         try:
             # lectura de consola
@@ -296,12 +290,14 @@ def KeyboardCommand(reply):
 
             # tancament de tots els processos en cas de quit
             if com == cons.QUIT:
-                debugMode("Rebut quit, finalitzant client")
+                utilities.debugMode("Rebut quit, finalitzant client",
+                                    options.verbose)
                 while True:
                     os.kill(os.getppid(), signal.SIGTERM)
                     # enviament de configuracio en cas de send
             elif com == cons.STAT:
-                debugMode("Rebut stat, es disposa a mostrar la configuracio")
+                utilities.debugMode("Rebut stat, es disposa a mostrar la \
+                                    configuracio", options.verbose)
                 utilities.printStat(mac, name, situation, elemntslst)
             else:
                 print time.strftime('%X') + " Commanda Incorrecta"

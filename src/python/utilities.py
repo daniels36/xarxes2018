@@ -1,5 +1,15 @@
 import time
 import sys
+import socket
+
+
+# CREACIO DEL SOCSKET
+def createSock():
+
+    # creacio i assignacio del socket a un port
+    socudp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    socudp.bind(("", 0))
+    return socudp
 
 
 # MODEDEBUG
