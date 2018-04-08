@@ -30,8 +30,7 @@ def register():
     debugMode("Inici del proces de registre")
     reply = registerloop(regPDU)
     debugMode("Proces de registre finalitzat")
-    rndnum = reply[3].split('=')[1].strip()
-    print rndnum
+    rndnum = reply[2]    
     replyProcess(reply)
 
 #MOSTRA L'ESTAT DEL CLIENT
