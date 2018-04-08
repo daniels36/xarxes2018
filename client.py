@@ -263,7 +263,7 @@ def sendHello(resp, timer, comPDU):
     #enviment d'HELLOs segons temporitzador
     if time.time() - timer >= cons.SND_TM:
         debugMode("Enviat Paquet HELLO")
-        socudp.sendto(comPDU, (ip, int(port)))
+        socudp.sendto(comPDU, (server, int(srvUDP)))
         #en cas de enviament increment de numero de enviades per portar control
         #i actualitzacio del temporitzador
         resp = resp + 1
