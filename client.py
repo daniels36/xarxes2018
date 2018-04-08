@@ -94,7 +94,6 @@ def regTry(regPDU, t):
     global socudp, state, options, server, srvUDP, recPort
     #s'intenta fer un registre
     recPort = socudp.getsockname()[1]
-    actState("WAIT_ACK_SUBS")
     #enviem la nostra PDU i establim un temps per esperar la resposta
     socudp.sendto(regPDU, (server, int(srvUDP)))
     socudp.settimeout(t)
@@ -324,6 +323,7 @@ def sendSubsInfo():
         data = data + i + ";"
 
     data = data[:-1]
+    print data
     comPDU = definePDU(cons.PDU_FORM, cons.SUBS_INFO, rndnum, data)
     socudp.sendto(comPDU, (server, int(srvUDP)))
     actState("WAIT_ACK_INFO")
