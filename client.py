@@ -195,6 +195,7 @@ def helloTreatment(reply):
     resp = 0
     print situation
     comPDU = definePDU(cons.PDU_FORM, cons.HELLO, rndnum, name + ',' + situation)
+    time.sleep(1)
     socudp.sendto(comPDU, (server, int(srvUDP)))
     debugMode("Enviat primer Paquet amb HELLO")
     resp = resp + 1
