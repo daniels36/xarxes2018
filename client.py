@@ -193,7 +193,7 @@ def helloTreatment(reply):
     global socudp, server, srvUDP, rndnum, recPort, pid
     #preparacio dels parametres necessaris per al proces de enviament d'HELLOS
     resp = 0
-    comPDU = definePDU(cons.PDU_FORM, cons.HELLO, rndnum, "")
+    comPDU = definePDU(cons.PDU_FORM, cons.HELLO, rndnum, name + ',' + situation)
     socudp.sendto(comPDU, (server, int(srvUDP)))
     debugMode("Enviat primer Paquet amb HELLO")
     resp = resp + 1
