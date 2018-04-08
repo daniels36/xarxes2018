@@ -64,6 +64,7 @@ def registerloop(regPDU):
     t = 2
 
     #intentar registrar-se mentre no s'arribi al nombre maxim d'intents
+    actState("WAIT_ACK_SUBS")
     while seq_num <= cons.MAX_SEQ:
         try:
             debugMode("Intent de registre " + str(seq_num))
@@ -147,7 +148,6 @@ def replyProcess(reply):
         closeConnection()
 
     elif reply[0] == cons.SUBS_ACK:
-        actState("CONNECTED")
         #en cas de que el registre sigui correcte ens disposem a distribuir el
         #treball de mantenir la comunicacio i la recepcio de comandes
         distributeWork(reply)
@@ -195,6 +195,7 @@ def helloTreatment(reply):
     resp = 0
     print situation
     sendSubsInfo()
+    time.sleep(1)
     comPDU = definePDU(cons.PDU_FORM, cons.HELLO, rndnum, name + ',' + situation)
     socudp.sendto(comPDU, (server, int(srvUDP)))
     debugMode("Enviat primer Paquet amb HELLO")
@@ -325,6 +326,8 @@ def sendSubsInfo():
     data = data[:-1]
     comPDU = definePDU(cons.PDU_FORM, cons.SUBS_INFO, rndnum, data)
     socudp.sendto(comPDU, (server, int(srvUDP)))
+    actState("WAIT_ACK_INFO")
+
 
 if __name__ == '__main__':
     #parseig de les comandes rebudes a la hroa de la crida
