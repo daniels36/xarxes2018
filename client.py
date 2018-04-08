@@ -24,7 +24,7 @@ def register():
     treatDataFile()
     debugMode("Lectura del fitxer de dades del client")
 
-    regPDU = definePDU(cons.PDU_FORM,cons.SUBS_REQ, cons.DEF_RND, '')
+    regPDU = definePDU(cons.PDU_FORM,cons.SUBS_REQ, cons.DEF_RND, name + ',' + situation)
     debugMode("Inici del proces de registre")
     reply = registerloop(regPDU)
     print reply
@@ -93,9 +93,6 @@ def regTry(regPDU, t):
     #s'intenta fer un registre
     recPort = socudp.getsockname()[1]
     actState("WAIT_ACK_SUBS")
-    print server.strip()
-    print
-    print srvUDP
     #enviem la nostra PDU i establim un temps per esperar la resposta
     socudp.sendto(regPDU, (server, int(srvUDP)))
     socudp.settimeout(t)
