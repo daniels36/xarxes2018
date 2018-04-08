@@ -30,7 +30,8 @@ def register():
     debugMode("Inici del proces de registre")
     reply = registerloop(regPDU)
     debugMode("Proces de registre finalitzat")
-    #rndnum = reply[3]
+    rndnum = reply[3].split('=')[1].strip()
+    print rndnum
     replyProcess(reply)
 
 #MOSTRA L'ESTAT DEL CLIENT
@@ -185,9 +186,89 @@ def distributeWork(reply):
 
     else:
         debugMode("Proces pare preparat per iniciar el manteniment de comunicacions")
-        while True:
-            i = i+1
-        #AliveTreatment(reply)
+        helloTreatment(reply)
+
+#FASE DE MANTENIMENT DE COMUNICACIO
+#TRACTAMENT ALIVES
+def helloTreatment(reply):
+    global socudp, ip, port, rndnum, recPort, pid
+    #preparacio dels parametres necessaris per al proces de enviament d'ALIVES
+    resp = 0
+    comPDU = definePDU(cons.PDU_FORM, cons.HELLO, rndnum, "")
+    socudp.sendto(comPDU, (ip, int(port)))
+    debugMode("Enviat primer Paquet amb ALIVE")
+    resp = resp + 1
+    timer = time.time()
+    first = False
+    debugMode("Iniciant temportizador per a rebre respota d'ALIVES")
+    #recv no bloquejant
+    socudp.setblocking(0)
+    #enviament de alives
+    while True:
+        #si el servidor contesta als nostres enviaments continuem enviant
+        if resp < 3:
+            try:
+                #deteccio de finalitzacio
+                signal.signal(signal.SIGTERM,handler)
+                #recepcio del paquet del servidor
+                msg = struct.unpack(cons.PDU_FORM, socudp.recvfrom(recPort)[0])
+
+                resp, timer = sendAlive(resp, timer, comPDU)
+                #comprovacio del paquet rebut
+                if msg[0] == cons.ALIVE_ACK and cmp(reply[1:4],msg[1:4]) == 0:
+                    resp  = resp - 1
+                    #en cas de resposta al primer ALIVE informem del canvi d'estat
+                    if first == False:
+                        debugMode("Primer ALIVE rebut passem a estat ALIVE")
+                        actState("ALIVE")
+                        first = True
+                    debugMode("Paquet rebut: " + "Tipus paquet: " + str(msg[0]) + " Nom: " + str(msg[1]) + " MAC: " + str(msg[2]) + " Aleatori " + str(msg[3]) + " Dades: " +  "")
+                #si el paquet es un rebug finalitzem proces
+                elif msg[0] == cons.ALIVE_REJ:
+                    debugMode("Rebut rebuig de paquet")
+                    debugMode("Paquet rebut: " + "Tipus paquet: " + str(msg[0]) + " Nom: " + str(msg[1]) + " MAC: " + str(msg[2]) + " Aleatori " + str(msg[3]) + " Dades: " + str(msg[4]))
+                    os.kill(pid,signal.SIGKILL)
+                    closeConnection()
+                    timedRegister()
+
+                signal.signal(signal.SIGTERM,handler)
+            except socket.error:
+                signal.signal(signal.SIGTERM,handler)
+                resp, timer = sendAlive(resp, timer, comPDU)
+        #si el servidor no contesta tanquem proces
+        else:
+            debugMode("Impossible mantenir comunicacio amb el servidor")
+            os.kill(pid,signal.SIGKILL)
+            closeConnection()
+            timedRegister()
+
+#INTENT DE REGISTRE TEMPORITZAT
+def timedRegister():
+    timer = time.time()
+    while True:
+        if time.time() - timer  >= 10:
+            register()
+
+#TRACTAMENT DEL SENYAL
+def handler(signum,frame):
+    global pid
+    #tractament del senyal kill
+    os.kill(pid,signal.SIGKILL)
+    closeConnection()
+    sys.exit()
+
+#ENVIAMENT ALIVES
+def sendAlive(resp, timer, comPDU):
+    #enviment d'alives segons temporitzador
+    if time.time() - timer >= cons.SND_TM:
+        debugMode("Enviat Paquet ALIVE")
+        socudp.sendto(comPDU, (ip, int(port)))
+        #en cas de enviament increment de numero de enviades per portar control
+        #i actualitzacio del temporitzador
+        resp = resp + 1
+        timer = time.time()
+
+    return resp, timer
 
 #TANCA CONEXIO UDP
 def closeConnection():
