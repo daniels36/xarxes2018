@@ -30,7 +30,7 @@ def register():
     debugMode("Inici del proces de registre")
     reply = registerloop(regPDU)
     debugMode("Proces de registre finalitzat")
-    rndnum = reply[2]    
+    rndnum = reply[2]
     replyProcess(reply)
 
 #MOSTRA L'ESTAT DEL CLIENT
@@ -169,7 +169,7 @@ def replyProcess(reply):
         print time.strftime("%X") + " Estat Desconegut"
         closeConnection()
 
-#DIVISIO DE TREABALL PER RECEPCIO DE TECLAT I TRACTAMENT ALIVES
+#DIVISIO DE TREABALL PER RECEPCIO DE TECLAT I TRACTAMENT HELLOS
 def distributeWork(reply):
     global pid
     i = 0
@@ -188,21 +188,21 @@ def distributeWork(reply):
         helloTreatment(reply)
 
 #FASE DE MANTENIMENT DE COMUNICACIO
-#TRACTAMENT ALIVES
+#TRACTAMENT HELLOS
 def helloTreatment(reply):
-    global socudp, ip, port, rndnum, recPort, pid
-    #preparacio dels parametres necessaris per al proces de enviament d'ALIVES
+    global socudp, server, srvUDP, rndnum, recPort, pid
+    #preparacio dels parametres necessaris per al proces de enviament d'HELLOS
     resp = 0
     comPDU = definePDU(cons.PDU_FORM, cons.HELLO, rndnum, "")
-    socudp.sendto(comPDU, (ip, int(port)))
-    debugMode("Enviat primer Paquet amb ALIVE")
+    socudp.sendto(regPDU, (server, int(srvUDP)))
+    debugMode("Enviat primer Paquet amb HELLO")
     resp = resp + 1
     timer = time.time()
     first = False
-    debugMode("Iniciant temportizador per a rebre respota d'ALIVES")
+    debugMode("Iniciant temportizador per a rebre respota de HELLO")
     #recv no bloquejant
     socudp.setblocking(0)
-    #enviament de alives
+    #enviament de HELLOs
     while True:
         #si el servidor contesta als nostres enviaments continuem enviant
         if resp < 3:
@@ -212,18 +212,18 @@ def helloTreatment(reply):
                 #recepcio del paquet del servidor
                 msg = struct.unpack(cons.PDU_FORM, socudp.recvfrom(recPort)[0])
 
-                resp, timer = sendAlive(resp, timer, comPDU)
+                resp, timer = sendHello(resp, timer, comPDU)
                 #comprovacio del paquet rebut
-                if msg[0] == cons.ALIVE_ACK and cmp(reply[1:4],msg[1:4]) == 0:
+                if msg[0] == cons.HELLO and cmp(reply[1:4],msg[1:4]) == 0:
                     resp  = resp - 1
-                    #en cas de resposta al primer ALIVE informem del canvi d'estat
+                    #en cas de resposta al primer HELLO informem del canvi d'estat
                     if first == False:
-                        debugMode("Primer ALIVE rebut passem a estat ALIVE")
-                        actState("ALIVE")
+                        debugMode("Primer HELLO rebut passem a estat HELLO")
+                        actState("HELLO")
                         first = True
                     debugMode("Paquet rebut: " + "Tipus paquet: " + str(msg[0]) + " Nom: " + str(msg[1]) + " MAC: " + str(msg[2]) + " Aleatori " + str(msg[3]) + " Dades: " +  "")
                 #si el paquet es un rebug finalitzem proces
-                elif msg[0] == cons.ALIVE_REJ:
+                elif msg[0] == cons.HELLO_REJ:
                     debugMode("Rebut rebuig de paquet")
                     debugMode("Paquet rebut: " + "Tipus paquet: " + str(msg[0]) + " Nom: " + str(msg[1]) + " MAC: " + str(msg[2]) + " Aleatori " + str(msg[3]) + " Dades: " + str(msg[4]))
                     os.kill(pid,signal.SIGKILL)
@@ -233,7 +233,7 @@ def helloTreatment(reply):
                 signal.signal(signal.SIGTERM,handler)
             except socket.error:
                 signal.signal(signal.SIGTERM,handler)
-                resp, timer = sendAlive(resp, timer, comPDU)
+                resp, timer = sendHello(resp, timer, comPDU)
         #si el servidor no contesta tanquem proces
         else:
             debugMode("Impossible mantenir comunicacio amb el servidor")
@@ -256,11 +256,11 @@ def handler(signum,frame):
     closeConnection()
     sys.exit()
 
-#ENVIAMENT ALIVES
-def sendAlive(resp, timer, comPDU):
-    #enviment d'alives segons temporitzador
+#ENVIAMENT HELLOS
+def sendHello(resp, timer, comPDU):
+    #enviment d'HELLOs segons temporitzador
     if time.time() - timer >= cons.SND_TM:
-        debugMode("Enviat Paquet ALIVE")
+        debugMode("Enviat Paquet HELLO")
         socudp.sendto(comPDU, (ip, int(port)))
         #en cas de enviament increment de numero de enviades per portar control
         #i actualitzacio del temporitzador
