@@ -221,11 +221,13 @@ def helloTreatment(reply):
                         debugMode("Primer HELLO rebut passem a estat HELLO")
                         actState("HELLO")
                         first = True
-                    debugMode("Paquet rebut: " + "Tipus paquet: " + str(msg[0]) + " Nom: " + str(msg[1]) + " MAC: " + str(msg[2]) + " Aleatori " + str(msg[3]) + " Dades: " +  "")
+                        print msg
+                    #debugMode("Paquet rebut: " + "Tipus paquet: " + str(msg[0]) + " Nom: " + str(msg[1]) + " MAC: " + str(msg[2]) + " Aleatori " + str(msg[3]) + " Dades: " +  "")
                 #si el paquet es un rebug finalitzem proces
                 elif msg[0] == cons.HELLO_REJ:
                     debugMode("Rebut rebuig de paquet")
-                    debugMode("Paquet rebut: " + "Tipus paquet: " + str(msg[0]) + " Nom: " + str(msg[1]) + " MAC: " + str(msg[2]) + " Aleatori " + str(msg[3]) + " Dades: " + str(msg[4]))
+                    print msg
+                    #debugMode("Paquet rebut: " + "Tipus paquet: " + str(msg[0]) + " Nom: " + str(msg[1]) + " MAC: " + str(msg[2]) + " Aleatori " + str(msg[3]) + " Dades: " + str(msg[4]))
                     os.kill(pid,signal.SIGKILL)
                     closeConnection()
                     timedRegister()
