@@ -20,7 +20,7 @@ def register():
     debugMode("Client passa a NOT_SUBSCRIBED")
     actState("NOT_SUBSCRIBED")
     createSock()
-    debugMode("Creat Socket UDP")
+    debugMode("Create Socket UDP")
     treatDataFile()
     debugMode("Lectura del fitxer de dades del client")
 
@@ -93,6 +93,9 @@ def regTry(regPDU, t):
     #s'intenta fer un registre
     recPort = socudp.getsockname()[1]
     actState("WAIT_ACK_SUBS")
+    print server.strip()
+    print
+    print srvUDP
     #enviem la nostra PDU i establim un temps per esperar la resposta
     socudp.sendto(regPDU, (server, int(srvUDP)))
     socudp.settimeout(t)
@@ -111,14 +114,14 @@ def treatDataFile():
     global name, situation, elemntslst, mac, localTCP, server, srvUDP
     #lectura del fitxer i recollida de dades necessaries.
     name, situation, elemnts, mac, localTCP, server, srvUDP = readFile(options.client,1)
-    name = name.split('=')[1].rstrip()
-    situation = situation.split('=')[1].rstrip()
-    elemnts = elemnts.split('=')[1].rstrip()
+    name = name.split('=')[1].strip()
+    situation = situation.split('=')[1].strip()
+    elemnts = elemnts.split('=')[1].strip()
     elemntslst = elemnts.split(';')
-    mac = mac.split('=')[1].rstrip()
-    localTCP = localTCP.split('=')[1].rstrip()
-    server = server.split('=')[1].rstrip()
-    srvUDP = srvUDP.split('=')[1].rstrip()
+    mac = mac.split('=')[1].strip()
+    localTCP = localTCP.split('=')[1].strip()
+    server = server.split('=')[1].strip()
+    srvUDP = srvUDP.split('=')[1].strip()
 
 #FUNCIONS UTILITZADES EN TOTES LES FASES
 #DEFINEIX LA PDU A UTILITZAR
