@@ -319,7 +319,7 @@ def KeyboardCommand(reply):
 
 def sendSubsInfo():
     data = localTCP + ','
-    for i in elemntslst):
+    for i in elemntslst:
         data = data + i + ";"
 
     data = data[:-1]
