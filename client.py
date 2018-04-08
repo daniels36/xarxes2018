@@ -170,6 +170,7 @@ def replyProcess(reply):
 #DIVISIO DE TREABALL PER RECEPCIO DE TECLAT I TRACTAMENT ALIVES
 def distributeWork(reply):
     global pid
+    i = 0
     debugMode("Registre Correcte")
     debugMode("Creacio de proces fill per a rebre instruccions per teclat")
     pid = os.fork()
