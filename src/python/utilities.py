@@ -3,6 +3,23 @@ import sys
 import socket
 
 
+# TRACTAMENT DADES LLEGIDES
+def treatDataFile(f):
+    # lectura del fitxer i recollida de dades necessaries.
+    name, situation, elemnts, mac, localTCP, server, srvUDP = readFile(f, 1)
+
+    name = name.split('=')[1].strip()
+    situation = situation.split('=')[1].strip()
+    elemnts = elemnts.split('=')[1].strip()
+    elemntslst = elemnts.split(';')
+    mac = mac.split('=')[1].strip()
+    localTCP = localTCP.split('=')[1].strip()
+    server = server.split('=')[1].strip()
+    srvUDP = srvUDP.split('=')[1].strip()
+
+    return name, situation, elemntslst, mac, localTCP, server, srvUDP
+
+
 # CREACIO DEL SOCSKET
 def createSock():
 
@@ -24,8 +41,8 @@ def printStat(mac, name, situation, elemntslst):
     print "Nom: " + name
     print "Situacio: " + situation
     print "Elementslst: "
-    for i in elemntslst:
-        print i
+    for item in elemntslst:
+        print item
 
 
 # LLEGIR DEL FITXER

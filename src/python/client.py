@@ -20,14 +20,18 @@ def main():
 # FASE DE REGISTRE
 # PROCES D'ENREGISTRAMENT
 def register():
-    global rndnum, state, socudp
+    global rndnum, state, socudp, name, situation, elemntslst, mac, localTCP
+    global server, srvUDP
     reply = ""
 
     utilities.debugMode("Client passa a NOT_SUBSCRIBED", options.verbose)
     state = utilities.actState("NOT_SUBSCRIBED")
     socudp = utilities.createSock()
     utilities.debugMode("Create Socket UDP")
-    treatDataFile()
+
+    name, situation, elemntslst, mac, localTCP, server, srvUDP = \
+        utilities.treatDataFile(options.client)
+
     utilities.debugMode("Lectura del fitxer de dades del client")
 
     regPDU = definePDU(cons.PDU_FORM, cons.SUBS_REQ, cons.DEF_RND,
@@ -87,23 +91,6 @@ def regTry(regPDU, t):
     # retornem la resposta si l'hem rebut, en cas contrari es llanca una
     # exepcio que sera agafada per la funcio "registerloop"
     return struct.unpack(cons.PDU_FORM, socudp.recvfrom(recPort)[0])
-
-
-# TRACTAMENT DADES LLEGIDES
-def treatDataFile():
-    global name, situation, elemntslst, mac, localTCP, server, srvUDP
-    # lectura del fitxer i recollida de dades necessaries.
-    name, situation, elemnts, mac, localTCP, server, srvUDP = \
-        utilities.readFile(options.client, 1)
-
-    name = name.split('=')[1].strip()
-    situation = situation.split('=')[1].strip()
-    elemnts = elemnts.split('=')[1].strip()
-    elemntslst = elemnts.split(';')
-    mac = mac.split('=')[1].strip()
-    localTCP = localTCP.split('=')[1].strip()
-    server = server.split('=')[1].strip()
-    srvUDP = srvUDP.split('=')[1].strip()
 
 
 # FUNCIONS UTILITZADES EN TOTES LES FASES
@@ -319,7 +306,7 @@ def sendSubsInfo():
     for i in elemntslst:
         data = data + i + ";"
 
-    data = data[:-1] + "\0"
+    data = data[:-1]
     print data
     comPDU = definePDU(cons.PDU_FORM, cons.SUBS_INFO, rndnum, data)
     socudp.sendto(comPDU, (server, int(srvUDP)))
