@@ -323,7 +323,7 @@ def sendSubsInfo():
         data = data + i + ";"
 
     data = data[:-1]
-    comPDU = definePDU(cons.PDU_FORM, cons.HELLO, rndnum, data)
+    comPDU = definePDU(cons.PDU_FORM, cons.SUBS_INFO, rndnum, data)
     socudp.sendto(comPDU, (server, int(srvUDP)))
 
 if __name__ == '__main__':
