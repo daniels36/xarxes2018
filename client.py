@@ -5,6 +5,8 @@ import cons
 import time
 import socket
 import struct
+import signal
+
 __version__ = '0.0.1'
 
 def main():
