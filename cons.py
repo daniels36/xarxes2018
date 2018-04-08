@@ -49,5 +49,7 @@ SIZETCP = 178
 #COMMAND lines
 
 QUIT = "quit"
+STAT = "stat"
+LIST = "list"
 SEND = "send-conf"
 GET = "get-conf"

@@ -27,10 +27,9 @@ def register():
     regPDU = definePDU(cons.PDU_FORM,cons.SUBS_REQ, cons.DEF_RND, name + ',' + situation)
     debugMode("Inici del proces de registre")
     reply = registerloop(regPDU)
-    print reply
     debugMode("Proces de registre finalitzat")
     #rndnum = reply[3]
-    #replyProcess(reply)
+    replyProcess(reply)
 
 #MOSTRA L'ESTAT DEL CLIENT
 def actState(st):
@@ -136,6 +135,100 @@ def createSock():
     #creacio i assignacio del socket a un port
     socudp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     socudp.bind(("", 0))
+
+#TRACTAMENT DE RESPOSTA DE REGISTRE
+def replyProcess(reply):
+    #tractem la resposta rebuda per part del servidor en funcio del tipus de paquet
+    #que haguem rebut
+    if reply == "":
+        print time.strftime("%X") + " No s'ha pogut contactar amb el servidor"
+        closeConnection()
+
+    elif reply[0] == cons.SUBS_ACK:
+        actState("CONNECTED")
+        #en cas de que el registre sigui correcte ens disposem a distribuir el
+        #treball de mantenir la comunicacio i la recepcio de comandes
+        distributeWork(reply)
+
+    elif reply[0] == cons.SUBS_NACK:
+        print time.strftime("%X") + " Denegacio de Registre"
+        actState("NOT_SUBSCRIBED")
+        closeConnection()
+
+    elif reply[0] == cons.SUBS_REJ:
+        print time.strftime("%X") +" "+ reply[4].rstrip('\n')
+        actState("NOT_SUBSCRIBED")
+        closeConnection()
+
+    elif reply[0] == cons.INFO_ACK:
+        print time.strftime("%X") + " Error de Protocol"
+        closeConnection()
+    else:
+        print time.strftime("%X") + " Estat Desconegut"
+        closeConnection()
+
+#DIVISIO DE TREABALL PER RECEPCIO DE TECLAT I TRACTAMENT ALIVES
+def distributeWork(reply):
+    global pid
+    debugMode("Registre Correcte")
+    debugMode("Creacio de proces fill per a rebre instruccions per teclat")
+    pid = os.fork()
+    #distribuim el treball a realitzar
+    #la rebuda de comandes sera realitzada per el "fill" mentre que el manteniment
+    #de la conexio el realitzara el "pare"
+    if pid == 0:
+        debugMode("Proces fill preparat per a rebre instruccions per teclat")
+        KeyboardCommand(reply)
+
+    else:
+        debugMode("Proces pare preparat per iniciar el manteniment de comunicacions")
+        while True:
+            i = i+1
+        #AliveTreatment(reply)
+
+#TANCA CONEXIO UDP
+def closeConnection():
+    global socudp
+    #tancament de la coexio
+    actState("DISCONNECTED")
+    socudp.close()
+
+#FASE DE RECECPCIO DE COMANDES
+def KeyboardCommand(reply):
+    #recepcio de comandes fins que s'introdueixi la comanda quit
+    debugMode("Iniciant espera de comandes")
+    while True:
+        try:
+            #lectura de consola
+            com = raw_input("")
+
+            #tancament de tots els processos en cas de quit
+            if com == cons.QUIT:
+                debugMode("Rebut quit, finalitzant client")
+                while True:
+                    os.kill(os.getppid(),signal.SIGTERM)
+                    #enviament de configuracio en cas de send
+            elif com == cons.STAT:
+                debugMode("Rebut stat")
+                global name, situation, elemntslst, mac, localTCP, server, srvUDP
+                print "MAC: " + mac
+                print "Nom: " + name
+                print "Situacio: " + situation
+                print "Elementslst: "
+                for i in elemntslst:
+                    print i
+            else:
+                print time.strftime('%X') + " Commanda Incorrecta"
+
+        except KeyboardInterrupt:
+            while True:
+                os.kill(os.getppid(),signal.SIGTERM)
+        except socket.error:
+            pass
+        except:
+            #tancament en cas de fallada de recepcio de comandes
+            while True:
+                os.kill(os.getppid(),signal.SIGTERM)
 
 if __name__ == '__main__':
     #parseig de les comandes rebudes a la hroa de la crida
