@@ -55,12 +55,12 @@ int main(int argc, char *argv[]){
   int lines = 0, i;
   char input[5];
   char estat[12];
-  printf("IN0\n");
+
   /*Reserva de espai de memória compartida per a la taula de clients*/
   for(i=0;i<NUMCOMPUTERS;i++){
  	  registres[i] = (struct PCREG *)mmap(0, sizeof(*registres[NUMCOMPUTERS]), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
   }
-  printf("IN1\n");
+
   /*Parse de linea de comandes*/
   if(argc > 1){
     for(i=1;i < argc; i++){
@@ -90,13 +90,13 @@ int main(int argc, char *argv[]){
     }
   }
 
-  printf("IN2\n");
+
   /*Lectura del fitxer d'informació del servidor*/
   readServInfo(&serverInfo);
   /*Lectura del fitxer de equips permesos*/
-  printf("IN3\n");
+
   lines = readPermitedComputers();
-  printf("IN4\n");
+
   pidWork = fork();
   if(pidWork == 0){
     if(debug == 1){
