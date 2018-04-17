@@ -15,9 +15,12 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-
+#define LIST "list"
+#define QUIT "quit"
+#define MAP_ANONYMOUS 0x20
 #define NUMCOMPUTERS 100
 
+struct PCREG *registres[NUMCOMPUTERS];
 struct PCREG{
   char nomEquip[7];
   char adresaMac[13];
@@ -34,25 +37,30 @@ struct SERVINFO{
   char TCP[5];
 };
 
-char servFile[15] = "server.cfg\0";
-char autorized[15] = "equips.dat\0";
+struct SERVINFO serverInfo;
+int debug;
+int pidWork, pidAlives, pidMsg;
+char servFile[30] = "../cfg/server.cfg\0";
+char autorized[30] = "../dat/controlers.dat\0";
 
 void readServInfo(struct SERVINFO *serverInfo);
 int readPermitedComputers();
 int createUDPSocket();
 int createTCPSocket();
+void handler(int sig);
+
 
 int main(int argc, char *argv[]){
   int udpSocket;
   int lines = 0, i;
   char input[5];
   char estat[12];
-
+  printf("IN0\n");
   /*Reserva de espai de memória compartida per a la taula de clients*/
   for(i=0;i<NUMCOMPUTERS;i++){
  	  registres[i] = (struct PCREG *)mmap(0, sizeof(*registres[NUMCOMPUTERS]), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
   }
-
+  printf("IN1\n");
   /*Parse de linea de comandes*/
   if(argc > 1){
     for(i=1;i < argc; i++){
@@ -82,11 +90,13 @@ int main(int argc, char *argv[]){
     }
   }
 
+  printf("IN2\n");
   /*Lectura del fitxer d'informació del servidor*/
   readServInfo(&serverInfo);
   /*Lectura del fitxer de equips permesos*/
+  printf("IN3\n");
   lines = readPermitedComputers();
-
+  printf("IN4\n");
   pidWork = fork();
   if(pidWork == 0){
     if(debug == 1){
@@ -95,8 +105,8 @@ int main(int argc, char *argv[]){
     udpSocket = createUDPSocket();
 
     printf("[DEBUG] -> Preparat per a rebre regitres:\n");
-    work(udpSocket,serverInfo,lines);
-
+    /*work(udpSocket,serverInfo,lines);
+    */
     exit(0);
   } else{
     if(debug == 1){
@@ -132,7 +142,7 @@ int main(int argc, char *argv[]){
 /*Llegeix i agafa les dades del fitxer de informacio del servidor*/
 void readServInfo(struct SERVINFO *serverInfo){
   FILE *f;
-  char ignore[5];
+  char ignore[10];
   f = fopen(servFile, "r");
   if(f == NULL){
     printf("El fitxer no existeix");
@@ -154,8 +164,9 @@ void readServInfo(struct SERVINFO *serverInfo){
 int readPermitedComputers(){
   FILE *f;
   int i = 0;
-  f = fopen(autorized, "r");
   char coma[2];
+  f = fopen(autorized, "r");
+
   /*Mentres no arribem a fí de fitxer guardem les dades*/
   while(!feof(f)){
     fscanf(f,"%8s %1s %12s", registres[i] -> nomEquip, coma, registres[i] -> adresaMac);
@@ -214,4 +225,11 @@ int createTCPSocket(){
    }
 
    return tcpSocket;
+}
+
+/*Control de senyal*/
+void handler(int sig){
+  kill(pidAlives,SIGINT);
+  kill(pidMsg,SIGINT);
+  exit(0);
 }
