@@ -10,8 +10,61 @@ import signal
 
 __version__ = '0.0.1'
 
-global ndnum, state, socudp, name, situation, elemntslst, mac, localTCP
-global server, srvUDP, server_mac
+
+# TRACTAMENT DEL SENYAL
+def handler(signum, frame):
+    global pid, state, socudp
+    # tractament del senyal kill
+    os.kill(pid, signal.SIGKILL)
+    state = utilities.closeConnection(socudp, state)
+    sys.exit()
+
+
+# FASE DE RECECPCIO DE COMANDES
+def KeyboardCommand(reply):
+    global name, situation, elemntslst, mac, localTCP, server, srvUDP
+    # recepcio de comandes fins que s'introdueixi la comanda quit
+    utilities.debugMode("Iniciant espera de comandes", options.verbose)
+    while True:
+        try:
+            # lectura de consola
+            com = raw_input("")
+
+            # tancament de tots els processos en cas de quit
+            if com == cons.QUIT:
+                utilities.debugMode("Rebut quit, finalitzant client",
+                                    options.verbose)
+                while True:
+                    os.kill(os.getppid(), signal.SIGTERM)
+                    # enviament de configuracio en cas de send
+            elif com == cons.STAT:
+                utilities.debugMode("Rebut stat, es disposa a mostrar la \
+                                    configuracio", options.verbose)
+                utilities.printStat(mac, name, situation, elemntslst)
+            else:
+                print time.strftime('%X') + " Commanda Incorrecta"
+
+        except KeyboardInterrupt:
+            while True:
+                os.kill(os.getppid(), signal.SIGTERM)
+        except socket.error:
+            pass
+        except:
+            # tancament en cas de fallada de recepcio de comandes
+            while True:
+                os.kill(os.getppid(), signal.SIGTERM)
+
+
+def sendSubsInfo():
+    global state
+    elements = (localTCP, ';'.join(elemntslst))
+    data = ','.join(elements)
+    comPDU = utilities.definePDU(options.verbose, cons.PDU_FORM,
+                                 cons.SUBS_INFO, mac, rndnum, data)
+    socudp.sendto(comPDU, (server, int(srvUDP)))
+    state = utilities.actState("WAIT_ACK_INFO")
+    reply = struct.unpack(cons.PDU_FORM, socudp.recvfrom(recPort)[0])
+    replyProcess(reply)
 
 
 # DIVISIO DE TREABALL PER RECEPCIO DE TECLAT I TRACTAMENT HELLOS
@@ -28,7 +81,7 @@ def distributeWork(reply):
     if pid == 0:
         utilities.debugMode("Proces fill preparat per a rebre instruccions per \
                             teclat", options.verbose)
-        # KeyboardCommand(reply)
+        KeyboardCommand(reply)
 
     else:
         utilities.debugMode("Proces pare preparat per iniciar el \
@@ -37,51 +90,37 @@ def distributeWork(reply):
         sys.exit()
 
 
-def sendSubsInfo():
-    global state
-    elements = (localTCP, ';'.join(elemntslst))
-    data = ','.join(elements)
-    comPDU = utilities.definePDU(options.verbose, cons.PDU_FORM,
-                                 cons.SUBS_INFO, mac, rndnum, data)
-    socudp.sendto(comPDU, (server, int(srvUDP)))
-    state = utilities.actState("WAIT_ACK_INFO")
-    unpacked = struct.unpack(cons.PDU_FORM, socudp.recvfrom(recPort)[0])
-    code = unpacked[0]
-    data = unpacked[3].rstrip('/x00')
-    replyProcess(code, data)
-
-
 # TRACTAMENT DE RESPOSTA DE REGISTRE
-def replyProcess(codi, data):
+def replyProcess(reply):
     global state, socudp, rndnum
     # tractem la resposta rebuda per part del servidor en funcio del tipus
     # de paquet que haguem rebut
 
-    if codi == "":
+    if reply == "":
         print time.strftime("%X") + " No s'ha pogut contactar amb el servidor"
         state = utilities.closeConnection(socudp, state)
 
-    elif codi == cons.SUBS_ACK:
+    elif reply[0] == cons.SUBS_ACK:
         # en cas de que el registre sigui correcte ens disposem a distribuir el
         # treball de mantenir la comunicacio i la recepcio de comandes
         time.sleep(1)
         sendSubsInfo()
 
-    elif codi == cons.SUBS_NACK:
+    elif reply[0] == cons.SUBS_NACK:
         print time.strftime("%X") + " Denegacio de Registre"
         state = utilities.actState("NOT_SUBSCRIBED")
         state = utilities.closeConnection(socudp, state)
 
-    elif codi == cons.SUBS_REJ:
-        print time.strftime("%X") + " " + data
+    elif reply[0] == cons.SUBS_REJ:
+        print time.strftime("%X") + " " + reply[3].rstrip('\n')
         state = utilities.actState("NOT_SUBSCRIBED")
         state = utilities.closeConnection(socudp, state)
         time.sleep(2)
         register()
 
-    elif codi == cons.INFO_ACK:
+    elif reply[0] == cons.INFO_ACK:
         print time.strftime("%X") + " Rebut INFO_ACK"
-        distributeWork(codi)
+        distributeWork(reply)
     else:
         print time.strftime("%X") + " Estat Desconegut"
         state = utilities.closeConnection(socudp, state)
@@ -100,11 +139,8 @@ def regTry(regPDU, t):
     # retornem la resposta si l'hem rebut, en cas contrari es llanca una
     # exepcio que sera agafada per la funcio "registerloop"
     unpacked = struct.unpack(cons.PDU_FORM, socudp.recvfrom(recPort)[0])
-    codi = unpacked[0]
-    macServ = unpacked[1].rstrip('/x00')
-    rndnum = unpacked[2].rstrip('/x00')
-    data = unpacked[3].rstrip('/x00')
-    return codi, macServ, rndnum, data
+    print unpacked
+    return unpacked
 
 
 # BUCLE PER ENREGISTRAMENT
@@ -140,14 +176,14 @@ def registerloop(regPDU):
 
             num_packs = num_packs + 1
 
-    return "", "", "", ""
+    return ""
 
 
 # PROCES D'ENREGISTRAMENT
 def register():
     global rndnum, state, socudp, name, situation, elemntslst, mac, localTCP
     global server, srvUDP, server_mac
-
+    reply = ""
     socudp = utilities.createSock()
     utilities.debugMode("Create Socket UDP", options.verbose)
 
@@ -161,13 +197,14 @@ def register():
                                  mac, cons.DEF_RND, data)
 
     utilities.debugMode("Inici del proces de registre", options.verbose)
-    code, server_mac, rndnum, data = registerloop(regPDU)
+    reply = registerloop(regPDU)
     utilities.debugMode("Proces de registre finalitzat", options.verbose)
-    utilities.debugMode("Paket Rebut => Tipus: " + str(code) + " MAC: " +
-                        server_mac + " Random: " + rndnum + " Dades: " +
-                        data, options.verbose)
+    utilities.debugMode("Paket Rebut => Tipus: " + str(reply[0]) + " MAC: " +
+                        reply[1] + " Random: " + reply[2] + " Dades: " +
+                        reply[3].rstrip('\00')+'\0', options.verbose)
+    rndnum = reply[2].rstrip('\x00')
 
-    replyProcess(code, data)
+    replyProcess(reply)
 
 
 def main():

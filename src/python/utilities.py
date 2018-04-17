@@ -1,6 +1,17 @@
 import time
 import sys
 import socket
+import struct
+
+
+# DEFINEIX LA PDU A UTILITZAR
+def definePDU(verbose, form, sign, mac, random, data):
+    # crea una PDU amb les dades rebudes per parametre
+    debugMode("Dades a enviar:", verbose)
+    debugMode("Tipus Paquet: " + str(sign) + " MAC: " + mac +
+              " Numero aleatori: " + random + " Dades: " + data, verbose)
+    pack = struct.pack(form, sign, mac, random, data)
+    return pack
 
 
 # TRACTAMENT DADES LLEGIDES
@@ -8,11 +19,11 @@ def treatDataFile(f):
     # lectura del fitxer i recollida de dades necessaries.
     name, situation, elemnts, mac, localTCP, server, srvUDP = readFile(f, 1)
 
-    name = name.split('=')[1].strip()
-    situation = situation.split('=')[1].strip()
+    name = name.split('=')[1].strip().rstrip("\x00")
+    situation = situation.split('=')[1].strip().rstrip("\x00")
     elemnts = elemnts.split('=')[1].strip()
     elemntslst = elemnts.split(';')
-    mac = mac.split('=')[1].strip()
+    mac = mac.split('=')[1].strip().rstrip("\x00")
     localTCP = localTCP.split('=')[1].strip()
     server = server.split('=')[1].strip()
     srvUDP = srvUDP.split('=')[1].strip()
