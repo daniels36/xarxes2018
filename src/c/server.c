@@ -35,7 +35,7 @@
 #define QUIT "quit"
 #define MAP_ANONYMOUS 0x20
 #define NUMCOMPUTERS 100
-#define BUFSIZEUDP 78
+#define BUFSIZEUDP 103
 
 struct PCREG *registres[NUMCOMPUTERS];
 struct PCREG{
@@ -43,7 +43,7 @@ struct PCREG{
   char adresaMac[13];
   char IP[9];
   int estat;
-  char numAleat[7];
+  char numAleat[9];
   long timing;
 };
 
@@ -68,6 +68,7 @@ int pidWork, pidAlives, pidMsg;
 char servFile[30] = "../cfg/server.cfg\0";
 char autorized[30] = "../dat/controlers.dat\0";
 
+void modifyPCRegisters(int i, struct sockaddr_in udpRecvAdress);
 void readServInfo(struct SERVINFO *serverInfo);
 void work(int udpSocket, struct SERVINFO serverInfo, int lines);
 void makeUDPPDU(unsigned char sign, struct SERVINFO serverInfo, struct PDU_UDP *sendPDU, char random[], char error[]);
@@ -79,6 +80,7 @@ void aliveResponse(int udpSocket, int lines, struct PDU_UDP recvPDU,  struct soc
 void aliveStateChecker(int lines);
 void makeErrorPDU(unsigned char sign, char mac[], struct PDU_UDP *sendPDU, char random[], char error[]);
 void request(int udpSocket, int lines, struct PDU_UDP recvPDU,  struct sockaddr_in udpRecvAdress, struct SERVINFO serverInfo);
+int randomGenerator();
 
 int main(int argc, char *argv[]){
   int udpSocket;
@@ -185,8 +187,8 @@ void readServInfo(struct SERVINFO *serverInfo){
       fscanf(f, "%3s %1s %12s", ignore2, equals, serverInfo -> MAC);
       fscanf(f, "%8s %1s %5s", ignore3, equals, serverInfo -> UDP);
       fscanf(f, "%8s %1s %5s", ignore3, equals, serverInfo -> TCP);
-      fclose(f);
   }
+  fclose(f);
 }
 
 /*Lleigeix i agafa les dades del fixer de equips autoritzats*/
@@ -239,7 +241,7 @@ void handler(int sig){
 
 /*Treball a realitzar*/
 void work(int udpSocket, struct SERVINFO serverInfo, int lines){
-  int pidAlives, pidMsg;
+  int pidAlives, pidMsg ,i;
   long timed;
   char sndrcvFile[10]= "";
   char badPack[] = "Paquet Erroni";
@@ -272,7 +274,6 @@ void work(int udpSocket, struct SERVINFO serverInfo, int lines){
           /*distribució dels paquets segons el tipus*/
           if(recvPDU.tipusPacket == SUBS_REQ){
             pid = fork();
-
             /*Procés per gestionar registres*/
             if(pid == 0){
               printf("Rebut registre de %s\n",recvPDU.adresaMac);
@@ -282,7 +283,20 @@ void work(int udpSocket, struct SERVINFO serverInfo, int lines){
               request(udpSocket, lines, recvPDU,  udpRecvAdress, serverInfo);
               exit(0);
             }
-          }
+          }else if(recvPDU.tipusPacket == SUBS_INFO){
+            if(debug == 1){
+              printf("[DEBUG] -> REBUT: MAC: %s ALEA: %s  DADES: %s\n",recvPDU.adresaMac,recvPDU.numAleat,recvPDU.Dades);
+            }
+            /*Comprovem si l'equip esta autoritzat i el seu estat es Registered o ALIVE*/
+              for(i=0; i<lines ;i++){
+                /*Si l'equip es correcte i esta ALIVE enviem HELLO*/
+                if(strcmp(registres[i] -> numAleat,recvPDU.numAleat) == 0
+                  && strcmp(registres[i] -> adresaMac,recvPDU.adresaMac) == 0
+                  && (registres[i] -> estat == STATE_REGIST || registres[i] -> estat == STATE_ALIVE)){
+                    //SUBS_INFOOOOOOOOOOOOOOOO;
+                  }
+              }
+            }
           /*Procés per gestionar ALIVES */
           else if(recvPDU.tipusPacket == HELLO){
             pid = fork();
@@ -303,7 +317,7 @@ void work(int udpSocket, struct SERVINFO serverInfo, int lines){
 void initializeRandom(){
   int i;
   for( i = 0; i < NUMCOMPUTERS; i++){
-    strcpy(registres[i] -> numAleat, "000000");
+    strcpy(registres[i] -> numAleat, "00000000");
   }
 }
 
@@ -313,6 +327,8 @@ void makeUDPPDU(unsigned char sign,struct SERVINFO serverInfo, struct PDU_UDP *s
   strcpy(sendPDU -> adresaMac,serverInfo.MAC);
   strcpy(sendPDU -> numAleat,random);
   strcpy(sendPDU -> Dades, dades);
+  printf("%lu", sizeof(sendPDU));
+  printf("%u, %s, %s, %s\n",sign,serverInfo.MAC, random, dades );
 }
 
 /*Comprovacio de estat d'alive*/
@@ -397,7 +413,7 @@ void aliveResponse(int udpSocket, int lines, struct PDU_UDP recvPDU,  struct soc
     else if(strcmp(registres[i] -> adresaMac,recvPDU.adresaMac) == 0
     && registres[i] -> estat == STATE_DISCON){
       strcpy(error,"Equip no Registrat");
-      strcpy(alea,"000000");
+      strcpy(alea,"00000000");
       strcpy(mac,"000000000000");
 
 
@@ -414,7 +430,7 @@ void aliveResponse(int udpSocket, int lines, struct PDU_UDP recvPDU,  struct soc
     else if(strcmp(registres[i] -> adresaMac,recvPDU.adresaMac) == 0
     && registres[i] -> estat == STATE_REGIST && strcmp(registres[i] -> IP, inet_ntoa(udpRecvAdress.sin_addr)) == 0 && strcmp(registres[i] -> numAleat, recvPDU.numAleat) != 0){
       strcpy(error,"Numero Aleatori Incorrecte");
-      strcpy(alea,"000000");
+      strcpy(alea,"00000000");
       strcpy(mac,"000000000000");
 
 
@@ -432,7 +448,7 @@ void aliveResponse(int udpSocket, int lines, struct PDU_UDP recvPDU,  struct soc
     && registres[i] -> estat == STATE_REGIST && strcmp(registres[i] -> numAleat, recvPDU.numAleat) == 0
     && strcmp(registres[i] -> IP, inet_ntoa(udpRecvAdress.sin_addr)) != 0){
       strcpy(error,"IP incorrecta");
-      strcpy(alea,"000000");
+      strcpy(alea,"00000000");
       strcpy(mac,"000000000000");
 
 
@@ -449,7 +465,7 @@ void aliveResponse(int udpSocket, int lines, struct PDU_UDP recvPDU,  struct soc
     else if(strcmp(registres[i] -> adresaMac,recvPDU.adresaMac) == 0 && registres[i] -> estat == STATE_REGIST &&
     strcmp(registres[i] -> numAleat, recvPDU.numAleat) == 0  && strcmp(registres[i] -> IP, inet_ntoa(udpRecvAdress.sin_addr)) == 0){
       strcpy(error,"Nom Equip incorrecte");
-      strcpy(alea,"000000");
+      strcpy(alea,"00000000");
       strcpy(mac,"000000000000");
 
 
@@ -465,7 +481,7 @@ void aliveResponse(int udpSocket, int lines, struct PDU_UDP recvPDU,  struct soc
   /*Si em comprovat tots els equips i no em trobat el que ha enviat l'ALIVE enviem un ALIVE REJ i informem de l'error*/
   if(i == lines){
     strcpy(error,"Equip no autoritzat en el sistema");
-    strcpy(alea,"000000");
+    strcpy(alea,"00000000");
     strcpy(mac,"000000000000");
 
 
@@ -489,21 +505,21 @@ void makeErrorPDU(unsigned char sign, char mac[], struct PDU_UDP *sendPDU, char 
 /*Peticions de registre*/
 void request(int udpSocket, int lines, struct PDU_UDP recvPDU,  struct sockaddr_in udpRecvAdress, struct SERVINFO serverInfo){
   int i;
-  char random[7] = "",error[50] = "";
+  char random[9] = "",error[80] = "";
   struct PDU_UDP sendPDU;
   socklen_t addrlen = sizeof(udpRecvAdress);
+
   /*Comprovació de existencia del equip dins de'ls equips registrats*/
   for(i = 0; i < lines; i++){
     if(strcmp(registres[i] -> adresaMac,recvPDU.adresaMac) == 0){
 
-      if(registres[i] -> estat == STATE_DISCON && (strcmp("000000",recvPDU.numAleat) == 0 || strcmp(registres[i] -> numAleat,recvPDU.numAleat) == 0)){
+      if(registres[i] -> estat == STATE_DISCON && (strcmp("00000000",recvPDU.numAleat) == 0 || strcmp(registres[i] -> numAleat,recvPDU.numAleat) == 0)){
 
           /*Enviament de numero aleatori depenen de si en te un asignat o no*/
-          if(strcmp(registres[i] -> numAleat,"000000") == 0){
-            /*modifyPCRegisters(i, udpRecvAdress);*/
+          if(strcmp(registres[i] -> numAleat,"00000000") == 0){
+            modifyPCRegisters(i, udpRecvAdress);
           }
-
-          makeUDPPDU(SUBS_ACK, serverInfo, &sendPDU, registres[i] -> numAleat, serverInfo.TCP);
+          makeUDPPDU(SUBS_ACK, serverInfo, &sendPDU, registres[i] -> numAleat, serverInfo.UDP);
           sendto(udpSocket, &sendPDU, BUFSIZEUDP,0, (struct sockaddr *)&udpRecvAdress, addrlen);
 
           registres[i] -> timing = time(NULL);
@@ -528,4 +544,23 @@ void request(int udpSocket, int lines, struct PDU_UDP recvPDU,  struct sockaddr_
     makeUDPPDU(SUBS_REJ, serverInfo, &sendPDU, random, error);
     sendto(udpSocket, &sendPDU, BUFSIZEUDP,0, (struct sockaddr *)&udpRecvAdress, addrlen);
   }
+}
+
+/*Modificar els valors de IP i numero aleatori del equip registrat*/
+void modifyPCRegisters(int i, struct sockaddr_in udpRecvAdress){
+  char random[7];
+
+  sprintf(random,"%d",randomGenerator());
+  registres[i] -> estat = 1;
+  sprintf(registres[i] -> numAleat,"%8s", random);
+  sprintf(registres[i] -> IP,"%9s", inet_ntoa(udpRecvAdress.sin_addr));
+}
+
+/*generador del nombre aleatori*/
+int randomGenerator(){
+  int random;
+  srand(time(NULL));
+  random = rand()%90000000+10000000;
+
+  return random;
 }
