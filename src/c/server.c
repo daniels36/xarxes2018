@@ -243,9 +243,9 @@ void handler(int sig){
 void work(int udpSocket, struct SERVINFO serverInfo, int lines){
   int pidAlives, pidMsg ,i;
   long timed;
-  char sndrcvFile[10]= "";
   char badPack[] = "Paquet Erroni";
   char noAuto[] = "Equip no autoritzat";
+  struct PDU_UDP sendPDU;
   /*UDP*/
   struct PDU_UDP recvPDU;
   int recvlen;
@@ -293,7 +293,8 @@ void work(int udpSocket, struct SERVINFO serverInfo, int lines){
                 if(strcmp(registres[i] -> numAleat,recvPDU.numAleat) == 0
                   && strcmp(registres[i] -> adresaMac,recvPDU.adresaMac) == 0
                   && (registres[i] -> estat == STATE_REGIST || registres[i] -> estat == STATE_ALIVE)){
-                    //SUBS_INFOOOOOOOOOOOOOOOO;
+                    makeUDPPDU(INFO_ACK, serverInfo, &sendPDU, registres[i] -> numAleat, "2018");
+                    sendto(udpSocket, &sendPDU, BUFSIZEUDP,0, (struct sockaddr *)&udpRecvAdress, addrlen);
                   }
               }
             }
@@ -327,8 +328,6 @@ void makeUDPPDU(unsigned char sign,struct SERVINFO serverInfo, struct PDU_UDP *s
   strcpy(sendPDU -> adresaMac,serverInfo.MAC);
   strcpy(sendPDU -> numAleat,random);
   strcpy(sendPDU -> Dades, dades);
-  printf("%lu", sizeof(sendPDU));
-  printf("%u, %s, %s, %s\n",sign,serverInfo.MAC, random, dades );
 }
 
 /*Comprovacio de estat d'alive*/

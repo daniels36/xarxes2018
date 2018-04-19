@@ -10,7 +10,7 @@ def definePDU(verbose, form, sign, mac, random, data):
     debugMode("Dades a enviar:", verbose)
     debugMode("Tipus Paquet: " + str(sign) + " MAC: " + mac +
               " Numero aleatori: " + random + " Dades: " + data, verbose)
-    pack = struct.pack(form, sign, mac, random, data)
+    pack = struct.pack(form, sign, mac, random+"\0", data)
     return pack
 
 

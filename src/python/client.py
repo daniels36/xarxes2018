@@ -43,6 +43,7 @@ def sendSubsInfo():
     data = ','.join(elements)
     comPDU = utilities.definePDU(options.verbose, cons.PDU_FORM,
                                  cons.SUBS_INFO, mac, rndnum, data)
+    print rndnum
     socudp.sendto(comPDU, (server, int(srvUDP)))
     state = utilities.actState("WAIT_ACK_INFO")
     unpacked = struct.unpack(cons.PDU_FORM, socudp.recvfrom(recPort)[0])
@@ -166,7 +167,7 @@ def register():
     utilities.debugMode("Paket Rebut => Tipus: " + str(code) + " MAC: " +
                         server_mac + " Random: " + rndnum + " Dades: " +
                         data, options.verbose)
-
+    print rndnum
     replyProcess(code, data)
 
 
